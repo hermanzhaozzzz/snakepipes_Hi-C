@@ -1,0 +1,11 @@
+
+#########################################################################
+## Paths and Settings  - Start editing here !
+#########################################################################
+
+PREFIX = /lustre1/chengqiyi_pkuhpc/zhaohn/0.apps/HiC-Pro_installed
+BOWTIE2_PATH = /lustre1/chengqiyi_pkuhpc/zhaohn/0.apps/miniconda3/envs/HiC-Pro_v3.1.0/bin/bowtie2
+SAMTOOLS_PATH = /lustre1/chengqiyi_pkuhpc/zhaohn/0.apps/miniconda3/envs/HiC-Pro_v3.1.0/bin/samtools
+R_PATH = /lustre1/chengqiyi_pkuhpc/zhaohn/0.apps/miniconda3/envs/HiC-Pro_v3.1.0/bin/R
+PYTHON_PATH = /lustre1/chengqiyi_pkuhpc/zhaohn/0.apps/miniconda3/envs/HiC-Pro_v3.1.0/bin/python
+CLUSTER_SYS = SLURM

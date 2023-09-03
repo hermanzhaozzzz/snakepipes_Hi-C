@@ -1,0 +1,275 @@
+# ------------------------------------------------------------------->>>>>>>>>>
+# 命令
+# ------------------------------------------------------------------->>>>>>>>>>
+#```shell
+#########
+## local
+#########
+# HiC-Pro -i ../fastq -o ../out_dir -c step01_config-hicpro.sh
+# 
+# ########
+# # slurm
+# ########
+# # generate sbatch 
+# HiC-Pro -i ./fastq -o ./out_dir -c step01_config-hicpro.sh -p
+# # run step1
+# cd ./out_dir/ && sbatch HiCPro_step1_zHiC.sh && cd -
+# tail -f ./out_dir/slurm-*
+# # run step2
+# cd ../out_dir/ && sbatch HiCPro_step2_zHiC.sh && cd -
+# tail -f ./out_dir/slurm-*
+# ```
+# ------------------------------------------------------------------->>>>>>>>>>
+# 注意
+# ------------------------------------------------------------------->>>>>>>>>>
+# Copy and edit the configuration file ‘config-hicpro.txt’ in your local folder. 
+# The ‘[]’ options are optional and can be undefined. 带有[]中括号的参数可以不定义，为可选参数
+# Please change the variable settings below if necessary
+# ------------------------------------------------------------------->>>>>>>>>>
+# 数据前处理
+# ------------------------------------------------------------------->>>>>>>>>>
+# 数据比对bowtie2生成bam文件
+# 注意：
+# 1、比对时采用--reorder参数，确保以fastq完全相同的顺序输出sam文件
+# 2、采用部分比对参数(--local)，以代替端到端比对(--end-to-end)。# 暂时未动，还是--end-to-end
+#    因为HiC是嵌合片段，因此使用部分比对提高比对效率。
+# 3、调整比对参数
+# ------------------------------------------------------------------->>>>>>>>>>
+# Paths and Settings  - Do not edit ! 输入输出文件路径，尽量不动
+# ------------------------------------------------------------------->>>>>>>>>>
+TMP_DIR = tmp
+LOGS_DIR = logs
+BOWTIE2_OUTPUT_DIR = bowtie_results
+MAPC_OUTPUT = hic_results
+# Link to rawdata folder. The user usually not need to change this option
+# 尽量不动rawdata路径
+RAW_DIR = rawdata
+
+# ------------------------------------------------------------------->>>>>>>>>>
+# SYSTEM AND SCHEDULER - Start Editing Here !! 从这里开始编辑
+# ------------------------------------------------------------------->>>>>>>>>>
+# sort RAM bam排序所用内存
+# 经常因为这个出问题崩掉
+# SORT_RAM = 1000M
+
+# name of the main log file
+LOGFILE = hicpro.log
+
+# name of the job on the cluster【可选参数】
+JOB_NAME = zHiC 
+
+#######################################################################
+## slurm squeue
+#######################################################################
+JOB_ACCOUNT = chengqiyi_g1
+#-------------------->
+# 【cnlong】
+#-------------------->
+# N_CPU = 20
+# JOB_QUEUE = cn-long
+# JOB_QOS = chengqiyicnl
+#-------------------->
+# 【cn-short】
+#-------------------->
+N_CPU = 20
+JOB_QUEUE = cn-short
+JOB_QOS = chengqiyicns
+#-------------------->
+# 【cn_nl】
+#-------------------->
+# N_CPU = 24
+# JOB_QUEUE = cn_nl
+# JOB_QOS = chengqiyicnnl
+#-------------------->
+# 【fat4way】
+#-------------------->
+# N_CPU = 24
+# JOB_QUEUE = fat4way
+# JOB_QOS = chengqiyif4w
+#-------------------->
+# 【fat8way】
+#-------------------->
+# N_CPU = 64
+# JOB_QUEUE = fat8way
+# JOB_QOS = chengqiyif8w
+#-------------------->
+#########################################################################
+## Data
+#########################################################################
+# Keyword for first mate detection. Default:_R1
+PAIR1_EXT = _R1
+# Keywoard for seconde mate detection. Default:_R2
+PAIR2_EXT = _R2
+#######################################################################
+## Alignment tools
+#######################################################################
+# Path to bowtie2 indexes
+BOWTIE2_IDX_PATH = /lustre1/chengqiyi_pkuhpc/zhaohn/1.database/db_genomes/genome_fa/genome_ucsc_hg38/
+
+# Reference genome prefix used for genome indexes. Default: hg19 这里是index的前缀
+REFERENCE_GENOME = genome_ucsc_hg38.fa.bowtie2_index
+#######################################################################
+## Alignment options
+
+# 数据比对bowtie2生成bam文件
+# 注意：
+# 1、比对时采用--reorder参数，确保以fastq完全相同的顺序输出sam文件
+# 2、采用部分比对参数(--local)，以代替端到端比对(--end-to-end)。
+#    因为HiC是嵌合片段，因此使用部分比对提高比对效率。
+# 3、调整比对参数
+#######################################################################
+# Minimum mapping quality. Reads with lower quality are discarded. Default: 0
+MIN_MAPQ = 10
+# bowtie2 options for mapping step1. 
+# 比对时采用--reorder参数，确保以fastq完全相同的顺序输出sam文件
+# Default: –very-sensitive -L 30 –score-min L,-0.6,-0.2 –end-to-end –reorder
+BOWTIE2_GLOBAL_OPTIONS = --very-sensitive -L 30 --score-min L,-0.6,-0.2 --end-to-end --reorder
+
+# bowtie2 options for mapping step2. 
+# Default: –very-sensitive -L 20 –score-min L,-0.6,-0.2 –end-to-end –reorder
+# 采用部分比对参数(--local)，以代替端到端比对(--end-to-end), 因为HiC是嵌合片段，因此使用部分比对提高比对效率
+BOWTIE2_LOCAL_OPTIONS =  --very-sensitive -L 20 --score-min L,-0.6,-0.2 --end-to-end --reorder
+#######################################################################
+## Annotation files
+#######################################################################
+# Chromsome size file. 
+# Loaded from the ANNOTATION folder in the HiC-Pro installation directory. 放到安装文件夹下
+# Default: chrom_hg19.sizes
+# fasta的fai文件中的前两列信息就是长度
+# samtools faidx /lustre1/chengqiyi_pkuhpc/zhaohn/1.database/db_genomes/genome_fa/genome_ucsc_hg38/genome_ucsc_hg38.fa
+# cut -f1-2 /lustre1/chengqiyi_pkuhpc/zhaohn/1.database/db_genomes/genome_fa/genome_ucsc_hg38/genome_ucsc_hg38.fa.fai > chrom_hg38.sizes
+GENOME_SIZE = chrom_hg38.sizes
+#######################################################################
+## Allele specific analysis
+## http://nservant.github.io/HiC-Pro/AS.html#as
+#######################################################################
+# VCF file to SNPs which can be used to distinguish parental origin. See the allele specific section for more details
+# 【可选参数】
+# ALLELE_SPECIFIC_SNP = 
+#######################################################################
+## Capture Hi-C analysis
+#######################################################################
+# BED file of target regions to focus on (mainly used for capture Hi-C data)
+# 【可选参数】
+# CAPTURE_TARGET =
+# REPORT_CAPTURE_REPORTER = 
+#######################################################################
+## Digestion Hi-C
+#######################################################################
+# BED file with restriction fragments. 
+# Full path or name of file available in the ANNOTATION folder. 
+# Default: HindIII_resfrag_hg19.bed
+# 含有限制性片段的BED文件
+# 放到安装文件夹下
+# 如果annotation下没有对应的消化片段文件，则需要用digest_genome.py产生
+# python /lustre1/chengqiyi_pkuhpc/zhaohn/0.apps/HiC-Pro_installed/HiC-Pro_3.1.0/bin/utils/digest_genome.py \
+    # -r hindiii \
+    # -o hg38_hindiii.bed \
+    # /lustre1/chengqiyi_pkuhpc/zhaohn/1.database/db_genomes/genome_fa/genome_ucsc_hg38/genome_ucsc_hg38.fa
+GENOME_FRAGMENT = /lustre1/chengqiyi_pkuhpc/zhaohn/3.project/2022_DdCBE-3D-Genome_topic/2023-01-16_HiC_batch-1_2/snakepipes_Hi-C/program/HiC-Pro_3.1.0/annotation/DpnII_resfrag_hg38.bed
+
+# Ligation site sequence used for reads trimming. 
+# Depends on the fill in strategy. 
+# Example: AAGCTAGCTT
+# 酶的序列，例如：
+# HindIII，为AAGCTAGCTT
+# MboI，为GATCGATC
+# DPNII, GATCGATC
+LIGATION_SITE = GATCGATC
+
+# Minimum size of restriction fragments to consider for the Hi-C processing.
+# Example: 100
+# 为Hi-C处理考虑的限制片段的【最小大小】
+MIN_FRAG_SIZE = 100
+
+# Maximum size of restriction fragments to consider for the Hi-C processing.
+# Example: 100000
+# # 为Hi-C处理考虑的限制片段的【最大大小】
+MAX_FRAG_SIZE = 100000
+
+# Minimum sequenced insert size. 
+# Shorter 3C products are discarded. 
+# Example: 100
+# 测得【最小】插入大小。
+# 较短的3C产物会被丢弃
+MIN_INSERT_SIZE = 100
+
+# Maximum sequenced insert size. 
+# Larger 3C products are discarded. 
+# Example: 600
+# 测得【最大】插入大小。
+# 较短的3C产物会被丢弃
+MAX_INSERT_SIZE = 800
+
+#######################################################################
+## Hi-C processing
+#######################################################################
+# Filter short range contact below the specified distance. 
+# Mainly useful for DNase Hi-C. 
+# Example: 1000
+MIN_CIS_DIST = 1
+
+# Create output files with all classes of 3C products. 
+# Default: 0
+GET_ALL_INTERACTION_CLASSES = 1
+
+# Create a BAM file with all aligned reads flagged according to 
+# their classifaction and mapping category. 
+# 是否保留BAM文件，默认不保留
+# Default: 0
+GET_PROCESS_SAM = 1
+
+# Remove singleton reads. 
+# Default: 1
+RM_SINGLETON = 1
+
+# Remove multi-mapped reads. 
+# Default: 1
+RM_MULTI = 1
+
+# Remove duplicated reads’ pairs. 
+# Default: 1
+RM_DUP = 1
+
+#######################################################################
+## Contact Maps
+#######################################################################
+# Resolution of contact maps to generate (space separated). 
+# Default: 20000 40000 150000 500000 1000000
+# For compartment: 10mb~100mb
+# For TAD: 100kb~10mb
+# For functional loops: 10kb~100kb
+# For nucleosome clutches: 1kb~2kb
+#############1k###2k###5k###10k###20k###50k###100k###200k###500k#####1mb
+BIN_SIZE = 1000 2000 5000 10000 20000 50000 100000 200000 500000 1000000
+# BIN_SIZE = 5000 1000000
+
+# Binning step size in ‘n’ coverage _i.e._ window step. 
+# Default: 1
+# BIN_STEP
+
+# Output matrix format. 
+# Must be complete, asis, upper or lower. 
+# Default: upper
+MATRIX_FORMAT = upper
+
+#######################################################################
+## Normalization
+#######################################################################
+# Maximum number of iteration for ICE normalization. 
+# Default: 100
+MAX_ITER = 100
+
+# Define which pourcentage of bins with low counts should be force to zero. 
+# Default: 0.02. 
+# Replace SPARSE_FILTERING
+FILTER_LOW_COUNT_PERC = 0.02
+
+# Define which pourcentage of bins with low counts should be discarded 
+# before normalization. 
+# Default: 0
+FILTER_HIGH_COUNT_PERC = 0
+
+# The relative increment in the results before declaring convergence. 
+# Default: 0.1
+EPS = 0.1
