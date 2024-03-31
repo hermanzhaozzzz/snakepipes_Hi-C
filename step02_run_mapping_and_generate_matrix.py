@@ -73,36 +73,9 @@ BOWTIE2_INDEX = dt["bowtie2_index"]
 # ------------------------------------------------------------------->>>>>>>>>>
 # SOFTWARE INFO
 # ------------------------------------------------------------------->>>>>>>>>>
-# if input('Are you in a Hi-C env? Y/y/N/n') in ('Y', 'y'):
-#     pass
-# else:
-#     print('exit...')
-#     exit(0)
-print("make sure you are in mamba/conda env: HiC-Pro_v3.1.0")
-# check if cmd exists
-assert check_cmd("bioat")  # bioat version 0.1.2.1
-assert check_cmd("bowtie2")  # Bowtie 2 version 2.4.5
-assert check_cmd("samtools")  # samtools 1.15.1 Using htslib 1.15.1
-assert check_cmd("java")  # java -version openjdk version "1.8.0_112" OpenJDK Runtime Environment (Zulu 8.19.0.1-linux64) (build 1.8.0_112-b16) OpenJDK 64-Bit Server VM (Zulu 8.19.0.1-linux64) (build 25.112-b16, mixed mode)
-assert check_cmd("hicexplorer")  # hicexplorer=3.7.2
-assert check_cmd("hicBuildMatrix")  # hicexplorer subcommand
-assert check_cmd("hicCorrectMatrix")  # hicexplorer subcommand
-assert check_cmd("hicConvertFormat")  # hicexplorer subcommand
-assert check_cmd("hicFindTADs")  # hicexplorer subcommand
-# if use ice 矫正 (默认不用): pip install iced # Collecting iced # Downloading iced-0.5.10.tar.gz (2.3 MB)
-
 # manually set cmd path
-BOWTIE2 = "bowtie2"
-SAMTOOLS = "samtools"
-JAVA = "java"
 JUICER_TOOLS = "program/juicer_tools_1.22.01.jar"
-hicBuildMatrix = "hicBuildMatrix"
-hicCorrectMatrix = "hicCorrectMatrix"
-hicConvertFormat = "hicConvertFormat"
-hicFindTADs = "hicFindTADs"
 calculate_map_resolution = "program/Juicer_1.6/misc/calculate_map_resolution.sh"
-Rscript = "/lustre1/chengqiyi_pkuhpc/zhaohn/0.apps/miniconda3/bin/Rscript"
-
 
 # ------------------------------------------------------------------->>>>>>>>>>
 # rule all
@@ -177,6 +150,8 @@ rule map_read1_global:
         RG="SM:{sample}_R1"
     log:
         "../bam/{sample}/{sample}_R1.bwt2glob.log"
+    conda:
+        "snakepipes_Hi-C"
     shell:
         """
         INPUT={input}
@@ -184,7 +159,7 @@ rule map_read1_global:
             echo "[FATAL] find SE reads, raw reads should be PE reads in Hi-C protocol" > {log}
         elif [[ $INPUT =~ .*R1.fastq.gz$ ]]; then
             echo "[DEBUG] find PE reads, go on mapping" > {log}
-            {BOWTIE2} {BOWTIE2_GLOBAL_OPTIONS} --un {output.un} --rg-id BMG --rg {params.RG} -p {THREAD} -x {BOWTIE2_INDEX} -U {params.R1} -S {output.sam} >> {log} 2>&1
+            bowtie2 {BOWTIE2_GLOBAL_OPTIONS} --un {output.un} --rg-id BMG --rg {params.RG} -p {THREAD} -x {BOWTIE2_INDEX} -U {params.R1} -S {output.sam} >> {log} 2>&1
         else
             echo "[FATAL] fastq should be *.SE.fastq.gz or *.R[1,2].fastq.gz" > {log}
         fi
@@ -204,6 +179,8 @@ rule map_read2_global:
         RG="SM:{sample}_R2"
     log:
         "../bam/{sample}/{sample}_R2.bwt2glob.log"
+    conda:
+        "snakepipes_Hi-C"
     shell:
         """
         INPUT={input}
@@ -211,7 +188,7 @@ rule map_read2_global:
             echo "[FATAL] find SE reads, raw reads should be PE reads in Hi-C protocol" > {log}
         elif [[ $INPUT =~ .*R1.fastq.gz$ ]]; then
             echo "[DEBUG] find PE reads, go on mapping" > {log}
-            {BOWTIE2} {BOWTIE2_GLOBAL_OPTIONS} --un {output.un} --rg-id BMG --rg {params.RG} -p {THREAD} -x {BOWTIE2_INDEX} -U {params.R2} -S {output.sam} >> {log} 2>&1
+            bowtie2 {BOWTIE2_GLOBAL_OPTIONS} --un {output.un} --rg-id BMG --rg {params.RG} -p {THREAD} -x {BOWTIE2_INDEX} -U {params.R2} -S {output.sam} >> {log} 2>&1
         else
             echo "[FATAL] fastq should be *.SE.fastq.gz or *.R[1,2].fastq.gz" > {log}
         fi
@@ -225,10 +202,12 @@ rule sam2bam_read1_global:
         temp("../bam/{sample}/{sample}_R1.bwt2glob.bam")
     log:
         "../bam/{sample}/{sample}_R1.bwt2glob.log"
+    conda:
+        "snakepipes_Hi-C"
     shell:
         """
         echo "[DEBUG] start samtools view (sam to bam)" >> {log}
-        {SAMTOOLS} view -F 4 -hSb -@ {THREAD} {input} > {output}
+        samtools view -F 4 -hSb -@ {THREAD} {input} > {output}
         echo "[DEBUG] samtools view (sam to bam) done" >> {log}
         """
 ## End-to-end Alignement
@@ -239,10 +218,12 @@ rule sam2bam_read2_global:
         temp("../bam/{sample}/{sample}_R2.bwt2glob.bam")
     log:
         "../bam/{sample}/{sample}_R2.bwt2glob.log"
+    conda:
+        "snakepipes_Hi-C"
     shell:
         """
         echo "[DEBUG] start samtools view (sam to bam)" >> {log}
-        {SAMTOOLS} view -F 4 -hSb -@ {THREAD} {input} > {output}
+        samtools view -F 4 -hSb -@ {THREAD} {input} > {output}
         echo "[DEBUG] samtools view (sam to bam) done" >> {log}
         """
 # ------------------------------------------------------------------->>>>>>>>>>
@@ -258,6 +239,8 @@ rule hicpro_read1_trim:
         FQ="../bam/fastq_unmap_bwt2/{sample}_R1.trimmed.fastq"
     log:
         "../bam/fastq_unmap_bwt2/{sample}_R1.trimmed.log"
+    conda:
+        "snakepipes_Hi-C"
     shell:
         """
         program/HiC-Pro_3.1.0/scripts/cutsite_trimming --fastq {input} --cutsite {LIGATION_SITE} --out {params.FQ} > {log} 2>&1
@@ -275,6 +258,8 @@ rule hicpro_read2_trim:
         FQ="../bam/fastq_unmap_bwt2/{sample}_R2.trimmed.fastq"
     log:
         "../bam/fastq_unmap_bwt2/{sample}_R2.trimmed.log"
+    conda:
+        "snakepipes_Hi-C"
     shell:
         """
         program/HiC-Pro_3.1.0/scripts/cutsite_trimming --fastq {input} --cutsite {LIGATION_SITE} --out {params.FQ} > {log} 2>&1
@@ -292,10 +277,12 @@ rule map_read1_local:
         RG="SM:{sample}_R1_unmap"
     log:
         temp("../bam/{sample}/{sample}_R1.unmap_bwt2loc.log")
+    conda:
+        "snakepipes_Hi-C"
     shell:
         """
         echo "[DEBUG] start bowtie2 mapping" > {log}
-        {BOWTIE2} {BOWTIE2_LOCAL_OPTIONS} --rg-id BML --rg {params.RG} -p {THREAD} -x {BOWTIE2_INDEX} -U {input} -S {output} >> {log} 2>&1
+        bowtie2 {BOWTIE2_LOCAL_OPTIONS} --rg-id BML --rg {params.RG} -p {THREAD} -x {BOWTIE2_INDEX} -U {input} -S {output} >> {log} 2>&1
         echo "[DEBUG] bowtie2 mapping done" >> {log}
         """
 # Local Alignment
@@ -308,10 +295,12 @@ rule map_read2_local:
         RG="SM:{sample}_R2_unmap"
     log:
         temp("../bam/{sample}/{sample}_R2.unmap_bwt2loc.log")
+    conda:
+        "snakepipes_Hi-C"
     shell:
         """
         echo "[DEBUG] start bowtie2 mapping" > {log}
-        {BOWTIE2} {BOWTIE2_LOCAL_OPTIONS} --rg-id BML --rg {params.RG} -p {THREAD} -x {BOWTIE2_INDEX} -U {input} -S {output} >> {log} 2>&1
+        bowtie2 {BOWTIE2_LOCAL_OPTIONS} --rg-id BML --rg {params.RG} -p {THREAD} -x {BOWTIE2_INDEX} -U {input} -S {output} >> {log} 2>&1
         echo "[DEBUG] bowtie2 mapping done" >> {log}
         """
 # Local Alignment
@@ -322,10 +311,12 @@ rule sam2bam_read1_local:
         temp("../bam/{sample}/{sample}_R1.unmap_bwt2loc.bam")
     log:
         "../bam/{sample}/{sample}_R1.unmap_bwt2loc.log"
+    conda:
+        "snakepipes_Hi-C"
     shell:
         """
         echo "[DEBUG] start samtools view (sam to bam)" >> {log}
-        {SAMTOOLS} view -Sb -@ {THREAD} {input} > {output}
+        samtools view -Sb -@ {THREAD} {input} > {output}
         echo "[DEBUG] samtools view (sam to bam) done" >> {log}
         """
 # Local Alignment
@@ -339,7 +330,7 @@ rule sam2bam_read2_local:
     shell:
         """
         echo "[DEBUG] start samtools view (sam to bam)" >> {log}
-        {SAMTOOLS} view -Sb -@ {THREAD} {input} > {output}
+        samtools view -Sb -@ {THREAD} {input} > {output}
         echo "[DEBUG] samtools view (sam to bam) done" >> {log}
         """
 # ------------------------------------------------------------------->>>>>>>>>>
@@ -354,10 +345,12 @@ rule merge_global_and_local_read1:
         temp("../bam/{sample}/{sample}_R1.merged.bam")
     log:
         "../bam/{sample}/{sample}_R1.merged.log"
+    conda:
+        "snakepipes_Hi-C"
     shell:
         """
         echo "[DEBUG] start samtools merge" > {log}
-        {SAMTOOLS} merge -@ {THREAD} -n -f {output} {input.bam_global} {input.bam_local} >> {log} 2>&1
+        samtools merge -@ {THREAD} -n -f {output} {input.bam_global} {input.bam_local} >> {log} 2>&1
         echo "[DEBUG] samtools merge done" >> {log}
         """
 ## Merge global and local alignment in a single file
@@ -369,10 +362,12 @@ rule merge_global_and_local_read2:
         temp("../bam/{sample}/{sample}_R2.merged.bam")
     log:
         "../bam/{sample}/{sample}_R2.merged.log"
+    conda:
+        "snakepipes_Hi-C"
     shell:
         """
         echo "[DEBUG] start samtools merge" > {log}
-        {SAMTOOLS} merge -@ {THREAD} -n -f {output} {input.bam_global} {input.bam_local} >> {log} 2>&1
+        samtools merge -@ {THREAD} -n -f {output} {input.bam_global} {input.bam_local} >> {log} 2>&1
         echo "[DEBUG] samtools merge done" >> {log}
         """
 # ------------------------------------------------------------------->>>>>>>>>>
@@ -387,11 +382,13 @@ rule sortn_read1_bam:
         temp_path="../temp_files/{sample}/{sample}_R1"
     log:
         "../bam/{sample}/{sample}_R1.merged_sortn.log"
+    conda:
+        "snakepipes_Hi-C"
     shell:
         """
         mkdir -p {params.temp_path}
         echo "[DEBUG] start samtools sort -n" > {log}
-        {SAMTOOLS} sort -@ {THREAD} {SORT_RAM_PER_THREAD} -n -T {params.temp_path} -o {output} {input} >> {log} 2>&1
+        samtools sort -@ {THREAD} {SORT_RAM_PER_THREAD} -n -T {params.temp_path} -o {output} {input} >> {log} 2>&1
         echo "[DEBUG] samtools sort -n done" >> {log}
         """
 rule sortn_read2_bam:
@@ -403,11 +400,13 @@ rule sortn_read2_bam:
         temp_path="../temp_files/{sample}/{sample}_R2"
     log:
         "../bam/{sample}/{sample}_R2.merged_sortn.log"
+    conda:
+        "snakepipes_Hi-C"
     shell:
         """
         mkdir -p {params.temp_path}
         echo "[DEBUG] start samtools sort -n" > {log}
-        {SAMTOOLS} sort -@ {THREAD} {SORT_RAM_PER_THREAD} -n -T {params.temp_path} -o {output} {input} >> {log} 2>&1
+        samtools sort -@ {THREAD} {SORT_RAM_PER_THREAD} -n -T {params.temp_path} -o {output} {input} >> {log} 2>&1
         echo "[DEBUG] samtools sort -n done" >> {log}
         """
 # Compute mapping statistics
@@ -425,14 +424,16 @@ rule form_mapstat:
     log:
         f="../bam/{sample}/{sample}_R1.map_count.log",
         r="../bam/{sample}/{sample}_R2.map_count.log",
+    conda:
+        "snakepipes_Hi-C"
     shell:
         """
         echo "[DEBUG] start formming mapstat" > {log.f}
         
-        TOTAL_R1=`{SAMTOOLS} view -c {input.bam_f}`
-        MAPPED_R1=`{SAMTOOLS} view -c -F 4 {input.bam_f}`
-        GLOBAL_R1=`{SAMTOOLS} view -c -F 4 {input.bam_gf}`
-        LOCAL_R1=`{SAMTOOLS} view -c -F 4 {input.bam_lf}`
+        TOTAL_R1=`samtools view -c {input.bam_f}`
+        MAPPED_R1=`samtools view -c -F 4 {input.bam_f}`
+        GLOBAL_R1=`samtools view -c -F 4 {input.bam_gf}`
+        LOCAL_R1=`samtools view -c -F 4 {input.bam_lf}`
         echo "total_R1\t" $TOTAL_R1 >> {output.mapstat_f}
         echo "mapped_R1\t" $MAPPED_R1 >> {output.mapstat_f}
         echo "global_R1\t" $GLOBAL_R1 >> {output.mapstat_f}
@@ -442,10 +443,10 @@ rule form_mapstat:
         
         echo "[DEBUG] start formming mapstat" > {log.r}
         
-        TOTAL_R2=`{SAMTOOLS} view -c {input.bam_r}`
-        MAPPED_R2=`{SAMTOOLS} view -c -F 4 {input.bam_r}`
-        GLOBAL_R2=`{SAMTOOLS} view -c -F 4 {input.bam_gr}`
-        LOCAL_R2=`{SAMTOOLS} view -c -F 4 {input.bam_lr}`
+        TOTAL_R2=`samtools view -c {input.bam_r}`
+        MAPPED_R2=`samtools view -c -F 4 {input.bam_r}`
+        GLOBAL_R2=`samtools view -c -F 4 {input.bam_gr}`
+        LOCAL_R2=`samtools view -c -F 4 {input.bam_lr}`
         echo "total_R2\t" $TOTAL_R2 >> {output.mapstat_r}
         echo "mapped_R2\t" $MAPPED_R2 >> {output.mapstat_r}
         echo "global_R2\t" $GLOBAL_R2 >> {output.mapstat_r}
@@ -469,6 +470,8 @@ rule form_pairs_bam:
         stat="../bam/{sample}/{sample}.merged_sortn.bwt2pairs.pairstat"
     log:
         "../bam/{sample}/{sample}.merged_sortn.bwt2pairs.log"
+    conda:
+        "snakepipes_Hi-C"
     shell:
         # Usage : python mergeSAM.py
         # -f/--forward <forward read mapped file>
@@ -571,6 +574,8 @@ rule form_valid_pairs:
         out_path="../valid_pairs/"
     log:
         "../valid_pairs/{sample}.log"
+    conda:
+        "snakepipes_Hi-C"
     shell:
         """
         echo "[DEBUG] start forming validPairs" > {log}
@@ -592,6 +597,8 @@ rule sort_valid_pairs:
         "../valid_pairs/{sample}.merged_sortn.bwt2pairs.validPairs"
     output:
         "../valid_pairs/{sample}.merged_sortn.bwt2pairs.sorted.validPairs"
+    conda:
+        "snakepipes_Hi-C"
     shell:
         """   
         LANG=en; sort -T ../temp_files -S 50% -k2,2V -k3,3n -k5,5V -k6,6n -o {output} {input}
@@ -609,6 +616,8 @@ rule rm_dup_form_allValidPairs:
         awk_body="""{print;c1=$2;c2=$5;s1=$3;s2=$6}"""
     log:
         "../valid_pairs/{sample}.rm_dup_pairs.log"
+    conda:
+        "snakepipes_Hi-C"
     shell:
         """
         # 这里-m的merge可以把该文件夹下的其他validpairs都merge在一起，所以可以单样本拆分sort的时候merge在一起
@@ -632,6 +641,8 @@ rule form_all_valid_pairs_mergestat:
         awk_begion2=r"""{cis=cis+1; d=$6>$3?$6-$3:$3-$6; if (d<=20000){sr=sr+1}else{lr=lr+1}}""",
         awk_begion3=r"""{trans=trans+1}""",
         awk_end=r"""{print "trans_interaction\t"trans"\ncis_interaction\t"cis"\ncis_shortRange\t"sr"\ncis_longRange\t"lr}"""
+    conda:
+        "snakepipes_Hi-C"
     shell:
         """
         allcount=$(cat {input.vp} | wc -l)
@@ -648,6 +659,8 @@ rule merge_valid_interaction_stats:
     params:
         inputs = lambda wildcards, input: ",".join(input),
         tags = ",".join(SAMPLES)
+    conda:
+        "snakepipes_Hi-C"
     shell:
         """
         bioat table merge \
@@ -670,6 +683,8 @@ rule merge_map_resolution:
     params:
         inputs = lambda wildcards, input: ",".join(input),
         tags = ",".join(SAMPLES)
+    conda:
+        "snakepipes_Hi-C"
     shell:
         """
         bioat table merge \
@@ -693,6 +708,8 @@ rule generate_contact_maps:
         bin_size="{bin_size}"
     log:
         "../matrix/{bin_size}/{sample}_{bin_size}_raw.log"
+    conda:
+        "snakepipes_Hi-C"
     shell:
         # usage: build_matrix --binsize BINSIZE|--binfile --chrsizes FILE --ifile FILE 
         #     --oprefix PREFIX [--binadjust] [--step STEP] [--binoffset OFFSET]
@@ -733,6 +750,8 @@ rule quality_checks:
         plotMappingPairing="../quality_checks/plotMappingPairing_{sample}.log",
         plotHiCFragment="../quality_checks/plotHiCFragment_{sample}.log",
         plotHiCContactRanges="../quality_checks/plotHiCContactRanges_{sample}.log"
+    conda:
+        "snakepipes_Hi-C"
     shell:
         """
         mkdir -p {params.pic_dir}
@@ -898,6 +917,8 @@ rule sort_resfrag_for_juicer:
         b="""{print ""; prev=$1; printf "%s\t", $1}""",
         c="""{printf "%s\t",$3+1}""",
         d="""{print ""}"""
+    conda:
+        "snakepipes_Hi-C"
     shell:
         """
         awk 'BEGIN{params.a}$1!=prev{params.b} $1==prev {params.c} END{params.d}' {DIGEST_BED} | sed "s/\\t\\n/\\n/" | sed "/^$/d" > {output}
@@ -913,6 +934,8 @@ rule sort_valid_pairs_for_juicer:
         c="""{ print $1, $7, $5, $6, frag2[n2], $4, $2, $3, frag1[n1], $12, $11}""",
         temp_path="../temp_files/{sample}/{sample}_juicer",
         hic_dir="../hic_file/"
+    conda:
+        "snakepipes_Hi-C"
     shell:
         """
         mkdir -p {params.temp_path}
@@ -929,6 +952,8 @@ rule valid_pairs_to_hic:
         temp_path="../temp_files/{sample}/{sample}_juicer"
     log:
         "../hic_file/{sample}.rm_dup_pairs.allValidPairs.hic.log"
+    conda:
+        "snakepipes_Hi-C"
     shell:  # java -Xmx32g -jar program/juicer_tools_1.22.01.jar pre -h  # https://github.com/aidenlab/juicer/wiki/Pre
         """
         echo "[DEBUG] start valid pairs convertion to hic file ..." > {log}
@@ -954,9 +979,11 @@ rule hic_to_RDS:
     params:
         resolution = "{bin_size}",
         name = "sample"
+    conda:
+        "snakepipes_Hi-C"
     shell:
         """
-        {Rscript} program/save_rds.R -d {output} -r {params.resolution} -n {params.name}
+        Rscript program/save_rds.R -d {output} -r {params.resolution} -n {params.name}
         """ 
 # ------------------------------------------------------------------->>>>>>>>>>
 # rule valid_pairs_to_hic:
@@ -1019,7 +1046,7 @@ rule hic_to_RDS:
 #         """
 #         mkdir -p {params.qc_dir}
 #         echo "[DEBUG] start to build raw matrix.hdf5 file ..." > {log}
-#         {hicBuildMatrix} --samFiles {input.bam_f} {input.bam_r} \
+#         jhicBuildMatrix --samFiles {input.bam_f} {input.bam_r} \
 #             --outFileName {output} \
 #             --binSize {params.bins} \
 #             --threads {THREAD} \
@@ -1041,11 +1068,13 @@ rule valid_pairs_to_hdf5:
         bin_size="{bin_size}"
     log:
         "../hdf5_file/{sample}_{bin_size}_RawMatrix.log"
+    conda:
+        "snakepipes_Hi-C"
     shell:
         """
         echo "[DEBUG] start to build raw matrix.hdf5 file ..." > {log}
         export HDF5_USE_FILE_LOCKING='FALSE' # for [locking disabled on this file system] err
-        {hicConvertFormat} \
+        hicConvertFormat \
             -m {input.matrix} \
             --bedFileHicpro {input.bed} \
             --inputFormat hicpro \
@@ -1060,11 +1089,13 @@ rule hdf5_matrix_correction:
         "../hdf5_file/{sample}_{bin_size}_KRjustify_Matrix.h5"
     log:
         "../hdf5_file/{sample}_{bin_size}_KRjustify_Matrix.log"
+    conda:
+        "snakepipes_Hi-C"
     shell:
         """
         echo "[DEBUG] start to justify matrix ..." > {log}
         export HDF5_USE_FILE_LOCKING='FALSE' # for [locking disabled on this file system] err
-        {hicCorrectMatrix} correct \
+        hicCorrectMatrix correct \
             -m {input} \
             --correctionMethod KR \
             -o {output} >> {log} 2>&1
@@ -1084,7 +1115,7 @@ rule hdf5_matrix_correction:
 #         """
 #         echo "[DEBUG] start to calling ..." > {log}
 #         export HDF5_USE_FILE_LOCKING='FALSE' # for [locking disabled on this file system] err
-#         {hicFindTADs} \
+#         hicFindTADs \
 #             -m {input} \
 #             --outPrefix {params.out_dir} \
 #             --numberOfProcessors {THREAD} \
